@@ -5,6 +5,12 @@ PPM Method-C with interpolated smoothing, see p89 of [1].
 of melodic structure in music perception and composition (Doctoral dissertation,
 City University London).
 
+Github Workflow:
+1. Add your work `git add file.py`, repeat this for any file you've changed
+2. Commit your work 'git commit -m "message describing your change"
+3. Pull latest version of the remote branch `git pull`
+4. Push `git push`
+
 '''
 import numpy as np
 from pynput import keyboard
