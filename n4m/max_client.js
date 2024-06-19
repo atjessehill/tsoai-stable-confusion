@@ -29,6 +29,7 @@ client.on('connect', function(connection) {
 			  'value': dir
 			}
 		}))
+
     });
 
 });

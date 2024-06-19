@@ -1,0 +1,47 @@
+import os
+import time
+from random import randrange
+import asyncio
+
+from sanic import Request, Websocket, Sanic
+from sanic import json as jsonresponse
+
+# from .model import FakeEventGenerator
+
+app = Sanic("stable_confusion")
+
+
+@app.websocket("/feed")
+async def feed(request: Request, ws: Websocket):
+
+    # model = FakeEventGenerator()
+
+    # recieve created & gathered -> y
+    # both created, recieve gathered -> n
+
+    async def send_messages():
+        count = 0
+        while True:
+            count += 1
+
+            randnum = randrange(10000)
+            if randnum == 10:  # if there is an event... send it
+                await ws.send(str({'foo': 'bar'}))
+            await asyncio.sleep(0.0000001)
+
+
+    async def receive_messages():
+        while True:
+            try:
+                data = await ws.recv()
+                print(data)
+            except Exception as e:
+                print(f"Error receiving message: {e}")
+                break
+
+    send_task = asyncio.create_task(send_messages())
+    receive_task = asyncio.create_task(receive_messages())
+    await asyncio.gather(receive_task, send_task)
+
+if __name__ == "__main__":
+    app.run(host="127.0.0.1", port=9999)
