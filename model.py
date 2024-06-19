@@ -17,6 +17,8 @@ import threading
 
 DEFAULT_MAX_ORDER = 2
 
+## Just trying a change
+
 class PPMC(object):
     ''' PPM Method-C, using interpolated smoothing '''
 
