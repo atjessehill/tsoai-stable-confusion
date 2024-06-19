@@ -16,10 +16,15 @@ client.on('connect', function(connection) {
         console.log('echo-protocol Connection Closed');
     });
     connection.on('message', function(message) {
-        maxApi.post(`Received Message: ${message.utf8Data}`);
-//        if (message.type === 'utf8') {
-//            console.log("Received: '" + message.utf8Data + "'");
-//        }
+
+        const jsonString = message.utf8Data.replace(/'/g, '"');
+        const parsedList = JSON.parse(jsonString);
+        const onset = parsedList
+        maxApi.post(`Received Message: ${parsedList}`);
+        // [[a, b, c], float]
+        maxApi.outlet(parsedList)
+
+//        maxApi.outlet()
     });
 
     maxApi.addHandler('input', (dir) => {
