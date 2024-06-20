@@ -19,13 +19,8 @@ todo:
 
 musical ideas:
     - everyone goes in a turn
-    - 
 
 """
-
-@app.after_server_start
-async def setup_chatroom(app: Sanic):
-    app.ctx.session = Session()
 
 LATENCY_COMP = 0.0
 
@@ -37,28 +32,37 @@ maxSD = 2  # 2.5 worked well
 
 alphabet = set([])  ## Initialize empty alphabet
 
-ppm = PPMC(order=order, alphabet=alphabet, modelSD=noisePar, maxSD=maxSD, learnRatio=learnRatio)
-
+@app.after_server_start
+async def setup_chatroom(app: Sanic):
+    app.ctx.session = Session()
+    app.ctx.ppm = PPMC(order=order, alphabet=alphabet, modelSD=noisePar, maxSD=maxSD, learnRatio=learnRatio)
+    app.ctx.last_time = None
 
 @app.websocket("/feed")
 async def feed(request: Request, ws: Websocket):
 
-    try:
-        async def receive_messages():
-            last_time = None
-            while True:
-                try:
-                    resp = {}
-                    data = await ws.recv()
-                    print(f"======= NEW EVENT =======")
-                    data = eval(data)
-                    event_time = data['clientTime']
-                    resp['eventTime'] = event_time
 
-                    if last_time is not None:
-                        interval = (event_time - last_time) / 1000
-                        print(f"INTERVAL: {interval}")
-                        pdf, alphabet, curAlphabetIntervals = ppm.fit(interval, verbose=True)
+    async def receive_messages():
+        count = 0
+        while True:
+            try:
+                resp = {}
+                update_last_time = True
+                data = await ws.recv()
+                data = eval(data)
+                event_time = data['clientTime']
+                resp['eventTime'] = event_time
+
+                if app.ctx.last_time is not None:
+                    print(app.ctx.last_time, event_time, event_time-app.ctx.last_time)
+                    interval = (event_time - app.ctx.last_time) / 1000
+
+                    if interval < 0.10:
+                        update_last_time = False
+                    else:
+                        count += 1
+                        print(f"======= NEW EVENT {count} ======= {id(app.ctx.ppm)}")
+                        pdf, alphabet, curAlphabetIntervals = app.ctx.ppm.fit(interval, verbose=True)
 
                         placeholder_rand_value = random.random()
 
@@ -75,22 +79,21 @@ async def feed(request: Request, ws: Websocket):
 
                         await request.app.ctx.session.push(str(resp))
 
-                    else:
-                        print("First key press detected")
-                    last_time = event_time
-                except Exception as e:
-                    raise e
-                    print(f"Error receiving message: {e}")
-                    break
+                else:
+                    print("First key press detected")
 
-        client = Client(ws)
-        request.app.ctx.session.add_client(client)
+                if update_last_time:
+                    app.ctx.last_time = event_time
+            except Exception as e:
+                raise e
+                print(f"Error receiving message: {e}")
+                break
 
-        receive_task = asyncio.create_task(receive_messages())
-        await asyncio.gather(receive_task)
+    client = Client(ws)
+    request.app.ctx.session.add_client(client)
 
-    except:
-        request.app.ctx.session.remove(client)
+    receive_task = asyncio.create_task(receive_messages())
+    await asyncio.gather(receive_task)
 
 
 class Client:
