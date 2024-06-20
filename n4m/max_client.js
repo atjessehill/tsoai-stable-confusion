@@ -9,7 +9,7 @@ client.on('connectFailed', function(error) {
 
 function sendToMax(category, velocity, interval, rand) {
 
-    maxApi.outlet(category, velocity, interval, rand)
+    maxApi.outlet(category, velocity, interval/1000, rand)
 }
 
 
