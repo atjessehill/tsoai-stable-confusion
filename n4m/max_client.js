@@ -7,13 +7,12 @@ client.on('connectFailed', function(error) {
     console.log('Connect Error: ' + error.toString());
 });
 
-function sendToMax(category, velocity, interval, rand, i) {
-
-    //maxApi.post(`Sending ${category} ${velocity} ${interval} ${rand}`)
-	maxApi.post(`Sending ${i}`)
+function sendToMax(eventTime, intervalMS, delay, category, velocity, interval, rand, i) {
+    const currTime = Date.now();
+    const expTime = eventTime + intervalMS;
+	maxApi.post(`${eventTime}, ${delay}, ${intervalMS}, ${currTime}`)
     maxApi.outlet(category, velocity, interval, rand)
 }
-
 
 client.on('connect', function(connection) {
     console.log('WebSocket Client Connected');
@@ -30,21 +29,18 @@ client.on('connect', function(connection) {
         const eventTime = respObj['eventTime'];
 		const events = respObj['predictedEvents'];
 
-		maxApi.post(`eventTime: ${eventTime}`);
-
 		for (let i = 0; i < events.length; i++) {
 
             const category = events[i][0]
-            const intervalMS = events[i][1]
+            const intervalMS = events[i][1];
             const velocity = events[i][2]
             const randPlaceholder = events[i][3]
 
-            const currTime = new Date();
-
+            // the time we expect the event
             const delay = (eventTime + intervalMS) - Date.now();
 
             setTimeout(() => {
-                Promise.resolve().then(() => sendToMax(category, velocity, intervalMS, randPlaceholder, i));
+                Promise.resolve().then(() => sendToMax(eventTime, intervalMS, delay, category, velocity, intervalMS, randPlaceholder, i));
             }, delay);
 
 		}
