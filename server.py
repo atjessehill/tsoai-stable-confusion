@@ -24,21 +24,21 @@ musical ideas:
 
 LATENCY_COMP = 0.0
 
+
 @app.websocket("/feed")
 async def feed(request: Request, ws: Websocket):
-
     categories = ['A', 'B', 'C', 'D']
 
-    order = 4 # was 4
-    noisePar = 0.2 # was 0.18 # determines SD
+    order = 4  # was 4
+    noisePar = 0.2  # was 0.18 # determines SD
     learnRatio = 0.1  # was 0.1
     minQuantizationProb = 0.7  # determines threshold probability for which item will be put in category
     maxSD = 2  # 2.5 worked well
 
-    alphabet = set([]) ## Initialize empty alphabet
-    #onsettimes = np.array([0,1,,3,3.55,4,5,6,7])
-    #iois = np.array([1,2,3,1,2.1,2.99,1,2,3,1,2,3])
-    ppm = PPMC(order=order,alphabet=alphabet,modelSD = noisePar,maxSD = maxSD,learnRatio=learnRatio)
+    alphabet = set([])  ## Initialize empty alphabet
+    # onsettimes = np.array([0,1,,3,3.55,4,5,6,7])
+    # iois = np.array([1,2,3,1,2.1,2.99,1,2,3,1,2,3])
+    ppm = PPMC(order=order, alphabet=alphabet, modelSD=noisePar, maxSD=maxSD, learnRatio=learnRatio)
 
     start_time = time.time()
 
@@ -62,9 +62,9 @@ async def feed(request: Request, ws: Websocket):
 
             await asyncio.sleep(1)
 
-    async def send_event(_ws, interval,category, velocity):
+    async def send_event(_ws, interval, category, velocity):
         # velocity = round(velocity*127)
-        interval = max(0, interval-LATENCY_COMP)
+        interval = max(0, interval - LATENCY_COMP)
         resp = str([str(category), float(velocity), interval, random.random()])
         print(f"Waiting for {interval}")
         await asyncio.sleep(interval)
@@ -75,37 +75,41 @@ async def feed(request: Request, ws: Websocket):
         last_time = None
         while True:
             try:
+                resp = {}
                 data = await ws.recv()
+                print(f"======= NEW EVENT =======")
                 data = eval(data)
-                print(data)
-                curr_time = data['clientTime']
-
-                # 1718816562336 | client
-                # 1718816563    |
+                event_time = data['clientTime']
+                resp['eventTime'] = event_time
 
                 if last_time is not None:
-                    interval = (curr_time - last_time) / 1000
-                    server_time = time.time_ns()
-                    print("LATENCY: ", curr_time, server_time, (server_time-curr_time))
-                    # print(f"Time interval: {interval:.4f} seconds")
+                    interval = (event_time - last_time) / 1000
+                    print(f"INTERVAL: {interval}")
                     pdf, alphabet, curAlphabetIntervals = ppm.fit(interval, verbose=True)
-                    # print('pdf:', np.round(pdf, 2))
-                    # print('alphabet:', alphabet)
 
-                    for interval in range(len(alphabet)):
-                        curCat = alphabet[interval]
-                        curInterval = curAlphabetIntervals[interval]
-                        curVelocity = pdf[interval]
-                        asyncio.create_task(send_event(ws, curInterval, curCat, curVelocity))
+                    placeholder_rand_value = random.random()
+
+                    predicted_events = [
+                        [
+                            str(alphabet[interval]),
+                            float(curAlphabetIntervals[interval] * 1000),  # 0.015151 <- seconds
+                            float(pdf[interval]),  # <- velocity/probability
+                            placeholder_rand_value
+                        ]
+                        for interval in range(len(alphabet))
+                    ]
+                    resp['predictedEvents'] = predicted_events
+                    print(predicted_events)
+
+                    await ws.send(str(resp))
 
                 else:
                     print("First key press detected")
-                last_time = curr_time
+                last_time = event_time
             except Exception as e:
                 raise e
                 print(f"Error receiving message: {e}")
                 break
-
 
     # send_task = asyncio.create_task(send_messages())
     receive_task = asyncio.create_task(receive_messages())
@@ -113,7 +117,5 @@ async def feed(request: Request, ws: Websocket):
     await asyncio.gather(receive_task)
 
 
-
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=9999)
+    app.run(host="0.0.0.0", port=9998)
