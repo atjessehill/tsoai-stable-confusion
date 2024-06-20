@@ -7,6 +7,14 @@ client.on('connectFailed', function(error) {
     console.log('Connect Error: ' + error.toString());
 });
 
+function sendToMax(category, velocity, interval, rand, i) {
+
+    //maxApi.post(`Sending ${category} ${velocity} ${interval} ${rand}`)
+	maxApi.post(`Sending ${i}`)
+    maxApi.outlet(category, velocity, interval, rand)
+}
+
+
 client.on('connect', function(connection) {
     console.log('WebSocket Client Connected');
     connection.on('error', function(error) {
@@ -18,13 +26,29 @@ client.on('connect', function(connection) {
     connection.on('message', function(message) {
 
         const jsonString = message.utf8Data.replace(/'/g, '"');
-        const parsedList = JSON.parse(jsonString);
-        const onset = parsedList
-        maxApi.post(`Received Message: ${parsedList}`);
-        // [[a, b, c], float]
-        maxApi.outlet(parsedList)
+        const respObj = JSON.parse(jsonString);
+        const eventTime = respObj['eventTime'];
+		const events = respObj['predictedEvents'];
 
-//        maxApi.outlet()
+		maxApi.post(`eventTime: ${eventTime}`);
+
+		for (let i = 0; i < events.length; i++) {
+
+            const category = events[i][0]
+            const intervalMS = events[i][1]
+            const velocity = events[i][2]
+            const randPlaceholder = events[i][3]
+
+            const currTime = new Date();
+
+            const delay = (eventTime + intervalMS) - Date.now();
+
+            setTimeout(() => {
+                Promise.resolve().then(() => sendToMax(category, velocity, intervalMS, randPlaceholder, i));
+            }, delay);
+
+		}
+
     });
 
     maxApi.addHandler('input', (dir) => {
