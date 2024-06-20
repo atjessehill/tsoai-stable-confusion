@@ -1,1 +1,5 @@
 sanic
+numpy
+pynput
+scipy
+matplotlib

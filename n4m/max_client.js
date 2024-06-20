@@ -28,11 +28,18 @@ client.on('connect', function(connection) {
     });
 
     maxApi.addHandler('input', (dir) => {
+
+        var currentDate = new Date();
+
+        // Get the Unix time in milliseconds and convert it to seconds
+        var unixTime = currentDate.getTime()
+
         connection.send(JSON.stringify({
 			'type': 'note',
 			'noteInfo': {
 			  'value': dir
-			}
+			},
+			'clientTime': unixTime
 		}))
 
     });
@@ -41,6 +48,6 @@ client.on('connect', function(connection) {
 
 
 
-client.connect('ws://localhost:9999/feed', null, null, {
+client.connect('ws://localhost:9998/feed', null, null, {
     'Sec-WebSocket-Protocol': 'subprotocols'
 });

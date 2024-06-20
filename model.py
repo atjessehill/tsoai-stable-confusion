@@ -25,25 +25,33 @@ DEFAULT_MAX_ORDER = 2
 
 ## Just trying a change
 
-class PPMC(object):
+class PPMC:
     ''' PPM Method-C, using interpolated smoothing '''
 
     RESULT_HEADERS = ('PDF','Alphabet','AlphabetIntervals')
     
     def __init__(self, order, alphabet,modelSD,maxSD,learnRatio):
-        self.order = order
+        self.order = order  # max size of memory
         self.alphabet = sorted(alphabet)
-        print('sorted alphabet:', self.alphabet)
         self.alpha_len = len(self.alphabet)
 
         # Context -> Count of Subsequent (for alphabet)
+
+        # todo: review how contexts are updated
         self.contexts = defaultdict(lambda: np.zeros(self.alpha_len))
         self.rowNames = self.alphabet
-        self.sd = modelSD
-        self.maxSD = maxSD
+        self.sd = modelSD  # determines width of each gaussian distribution
+        self.maxSD = maxSD  # threshold for categorization.
          # mapping from letters (keys) to time intervals, which will be udpated on the fly
-        self.alphabetInterval = {}
-        self.learnRatio = learnRatio
+        self.alphabetInterval = {}  # mean value of different categories.
+
+        # todo: review how this is updated.
+        _alphabetInterval = {
+            'A': 0.15,
+            'B': 2.5
+        }
+
+        self.learnRatio = learnRatio  # adaption rate of the category.
         self.fullSequenceCategories = []
         
     def informationcontent(self, pdf, e):
@@ -195,11 +203,12 @@ class PPMC(object):
         ## Send these values to Max
 
 if __name__ == '__main__':
+    print("here!!!!!!!!")
     #########################
     ### parameters
     order = 4 # was 4
     noisePar = 0.2 # was 0.18 # determines SD
-    learnRatio = 0.1 # was 0.1
+    learnRatio = 0.1  # was 0.1
     minQuantizationProb = 0.7 # determines threshold probability for which item will be put in category
     maxSD = 2 # 2.5 worked well
 
