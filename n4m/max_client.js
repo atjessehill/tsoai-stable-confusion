@@ -49,6 +49,13 @@ client.on('connect', function(connection) {
 
     });
 
+    maxApi.addHandler('reset', (dir) => {
+        connection.send(JSON.stringify({
+            'type': 'reset'
+        }))
+
+     });
+//
     maxApi.addHandler('input', (dir) => {
 
         var currentDate = new Date();
