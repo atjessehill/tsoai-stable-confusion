@@ -32,15 +32,20 @@ maxSD = 2  # 2.5 worked well
 
 alphabet = set([])  ## Initialize empty alphabet
 
-@app.after_server_start
-async def setup_chatroom(app: Sanic):
-    app.ctx.session = Session()
+
+def set_up_model(_app):
+    print("Setting up model...")
     app.ctx.ppm = PPMC(order=order, alphabet=alphabet, modelSD=noisePar, maxSD=maxSD, learnRatio=learnRatio)
     app.ctx.last_time = None
 
+@app.after_server_start
+async def setup_context(app: Sanic):
+    app.ctx.session = Session()
+    set_up_model(app)
+
+
 @app.websocket("/feed")
 async def feed(request: Request, ws: Websocket):
-
 
     async def receive_messages():
         count = 0
@@ -48,8 +53,14 @@ async def feed(request: Request, ws: Websocket):
             try:
                 resp = {}
                 update_last_time = True
+                reset_last_time = False
                 data = await ws.recv()
                 data = eval(data)
+
+                if data['type'] == 'reset':
+                    set_up_model(request.app)
+                    continue
+
                 event_time = data['clientTime']
                 resp['eventTime'] = event_time
 
@@ -59,6 +70,8 @@ async def feed(request: Request, ws: Websocket):
 
                     if interval < 0.10:
                         update_last_time = False
+                    elif interval > 5:
+                        reset_last_time = True
                     else:
                         count += 1
                         print(f"======= NEW EVENT {count} ======= {id(app.ctx.ppm)}")
@@ -84,16 +97,22 @@ async def feed(request: Request, ws: Websocket):
 
                 if update_last_time:
                     app.ctx.last_time = event_time
+                if reset_last_time:
+                    print("Resetting last_time")
+                    app.ctx.last_time = event_time
             except Exception as e:
                 raise e
                 print(f"Error receiving message: {e}")
                 break
 
     client = Client(ws)
-    request.app.ctx.session.add_client(client)
+    try:
+        request.app.ctx.session.add_client(client)
 
-    receive_task = asyncio.create_task(receive_messages())
-    await asyncio.gather(receive_task)
+        receive_task = asyncio.create_task(receive_messages())
+        await asyncio.gather(receive_task)
+    finally:
+        request.app.ctx.session.remove(client)
 
 
 class Client:
