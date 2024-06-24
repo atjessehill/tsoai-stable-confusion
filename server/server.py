@@ -11,10 +11,8 @@ app = Sanic("stable_confusion")
 
 """
 todo:
-    - sonification
-    - multiple inputs (make this model) 
-    - autonomous
-    - realtime output 
+    - autonomous mode
+    - realtime output: the model 
 
 musical ideas:
     - everyone goes in a turn
