@@ -1,8 +1,7 @@
 import random
 import asyncio
-from uuid import UUID, uuid4
-import time
-import numpy as np
+from client import Client
+from session import Session
 
 from sanic import Request, Websocket, Sanic
 
@@ -113,32 +112,6 @@ async def feed(request: Request, ws: Websocket):
         await asyncio.gather(receive_task)
     finally:
         request.app.ctx.session.remove(client)
-
-
-class Client:
-    def __init__(self, conn) -> None:
-        self.uid = uuid4()
-        self.conn = conn
-
-    def __hash__(self) -> int:
-        return self.uid.int
-
-
-class Session:
-
-    def __init__(self):
-        self.clients = set()
-
-    def add_client(self, client):
-        print("Registering client...")
-        self.clients.add(client)
-
-    def remove(self, client):
-        print("removing client...")
-        self.clients.remove(client)
-
-    async def push(self, message: str):
-        await asyncio.gather(*[client.conn.send(message) for client in self.clients])
 
 
 
